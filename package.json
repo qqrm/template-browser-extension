@@ -6,7 +6,7 @@
   "scripts": {
     "lint": "web-ext lint --source-dir extension --self-hosted",
     "build:firefox": "web-ext build --source-dir extension --artifacts-dir dist/firefox --overwrite-dest",
-    "build:chrome": "bestzip dist/chrome/extension.zip extension/*",
+    "build:chrome": "node -e \"require('fs').mkdirSync('dist/chrome',{recursive:true})\" && bestzip dist/chrome/extension.zip extension/*",
     "verify": "npm run lint && npm run build:firefox && npm run build:chrome"
   },
   "devDependencies": {
@@ -14,4 +14,3 @@
     "web-ext": "9.4.0"
   }
 }
-
