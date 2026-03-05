@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Template Extension",
+  "version": "0.1.0",
+  "description": "Template browser extension.",
+  "permissions": ["storage"],
+  "background": {
+    "service_worker": "background.js",
+    "scripts": ["background.js"]
+  },
+  "action": {
+    "default_title": "Template"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "template@example.com"
+    }
+  }
+}

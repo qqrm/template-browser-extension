@@ -1,0 +1,17 @@
+{
+  "name": "browser-extension-template",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Template for browser extensions with Firefox and Chrome deployment workflows.",
+  "scripts": {
+    "lint": "web-ext lint --source-dir extension --self-hosted",
+    "build:firefox": "web-ext build --source-dir extension --artifacts-dir dist/firefox --overwrite-dest",
+    "build:chrome": "bestzip dist/chrome/extension.zip extension/*",
+    "verify": "npm run lint && npm run build:firefox && npm run build:chrome"
+  },
+  "devDependencies": {
+    "bestzip": "2.2.1",
+    "web-ext": "9.4.0"
+  }
+}
+

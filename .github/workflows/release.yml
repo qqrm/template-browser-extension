@@ -1,0 +1,123 @@
+name: Deploy Browser Extension
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_firefox:
+        description: Deploy to Firefox AMO
+        required: true
+        default: true
+        type: boolean
+      deploy_chrome:
+        description: Deploy to Chrome Web Store
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Firefox package
+        run: npm run build:firefox
+
+      - name: Build Chrome package
+        run: npm run build:chrome
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-packages
+          path: dist/**
+          if-no-files-found: error
+
+  deploy-firefox:
+    if: ${{ inputs.deploy_firefox }}
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Firefox package
+        run: npm run build:firefox
+
+      - name: Sign and submit to AMO
+        env:
+          AMO_API_KEY: ${{ secrets.FIREFOX_JWT_ISSUER }}
+          AMO_API_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
+        run: |
+          npx web-ext sign \
+            --source-dir extension \
+            --artifacts-dir dist/firefox-signed \
+            --api-key "$AMO_API_KEY" \
+            --api-secret "$AMO_API_SECRET" \
+            --channel listed
+
+  deploy-chrome:
+    if: ${{ inputs.deploy_chrome }}
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: browser-packages
+          path: dist
+
+      - name: Publish to Chrome Web Store
+        env:
+          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+        run: |
+          set -euo pipefail
+          ACCESS_TOKEN=$(curl -sS "https://oauth2.googleapis.com/token" \
+            -d client_id="$CWS_CLIENT_ID" \
+            -d client_secret="$CWS_CLIENT_SECRET" \
+            -d refresh_token="$CWS_REFRESH_TOKEN" \
+            -d grant_type=refresh_token | jq -r '.access_token')
+
+          test -n "$ACCESS_TOKEN"
+
+          curl -sS -X PUT \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "x-goog-api-version: 2" \
+            -T dist/chrome/extension.zip \
+            "https://www.googleapis.com/upload/chromewebstore/v1.1/items/$CWS_EXTENSION_ID"
+
+          curl -sS -X POST \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "x-goog-api-version: 2" \
+            "https://www.googleapis.com/chromewebstore/v1.1/items/$CWS_EXTENSION_ID/publish"
