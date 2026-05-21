@@ -10,7 +10,7 @@
     "verify": "npm run lint && npm run build:firefox && npm run build:chrome"
   },
   "devDependencies": {
-    "bestzip": "2.2.1",
+    "bestzip": "3.0.0",
     "web-ext": "9.4.0"
   }
 }
