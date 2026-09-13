@@ -11,6 +11,6 @@
   },
   "devDependencies": {
     "bestzip": "3.0.1",
-    "web-ext": "9.4.0"
+    "web-ext": "10.6.0"
   }
 }
